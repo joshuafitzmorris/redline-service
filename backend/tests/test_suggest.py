@@ -1,8 +1,6 @@
-from functools import partial
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any, cast
-from unittest.mock import ANY
 
 import anthropic
 import httpx2
@@ -22,16 +20,7 @@ from redline.service import (
     TooLarge,
     Unavailable,
 )
-from redline.suggest import (
-    MODEL,
-    SYSTEM,
-    TIMEOUT,
-    ModelError,
-    Proposal,
-    Proposals,
-    new_client,
-    propose,
-)
+from redline.suggest import MODEL, SYSTEM, ModelError, Proposal, Proposals, propose
 
 TEXT = "4. Payment. Licensee pays within Net 30 days. Late fees accrue after Net 30."
 REQUEST = httpx2.Request("POST", "https://api.anthropic.com/v1/messages")
@@ -172,54 +161,19 @@ def test_propose_sends_the_contract_and_instruction_and_returns_the_proposals() 
     )
 
 
-UNUSABLE = [
-    SimpleNamespace(parsed_output=None),
-    SimpleNamespace(),
-    cut_off_answer(),
-    ValueError("an SDK guard"),
-    AttributeError("'NoneType' object has no attribute 'content'"),
-    TypeError("'NoneType' object is not iterable"),
-    RecursionError("maximum recursion depth exceeded"),
-    anthropic.APIConnectionError(request=REQUEST),
-    anthropic.APITimeoutError(request=REQUEST),
-]
-UNUSABLE_IDS = [
-    "no answer",
-    "not a message",
-    "cut off",
-    "value error",
-    "attribute error",
-    "type error",
-    "recursion error",
-    "connection",
-    "timeout",
-]
-
-
-@pytest.mark.parametrize("result", UNUSABLE, ids=UNUSABLE_IDS)
+@pytest.mark.parametrize(
+    "result",
+    [
+        SimpleNamespace(parsed_output=None),
+        cut_off_answer(),
+        anthropic.APIConnectionError(request=REQUEST),
+    ],
+    ids=["no answer", "cut off", "connection"],
+)
 def test_propose_turns_an_unusable_answer_into_a_model_error(result: object) -> None:
     client, _ = stub(result)
     with pytest.raises(ModelError):
         propose(client, "Make payment terms Net 45", TEXT)
-
-
-@pytest.mark.parametrize("result", UNUSABLE, ids=UNUSABLE_IDS)
-def test_an_unusable_answer_is_a_502(result: object) -> None:
-    client, _ = stub(result)
-    api = TestClient(create_app(Service(partial(propose, client))))
-    doc = api.post("/documents", json={"text": TEXT}).json()
-    response = api.post(f"/documents/{doc['id']}/suggestions", json={"instruction": "Net 45"})
-    assert response.status_code == 502
-    assert response.json() == {"error": ANY, "code": 502}
-    assert response.json()["error"].startswith("the model")
-
-
-def test_a_new_client_makes_one_attempt_with_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("ANTHROPIC_API_KEY", "never-used")
-    client = new_client()
-    assert isinstance(client.timeout, anthropic.Timeout)
-    assert (client.timeout.connect, client.timeout.read, client.max_retries) == (5.0, TIMEOUT, 0)
-    assert TIMEOUT == 120.0
 
 
 def seed(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:

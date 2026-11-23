@@ -1,7 +1,6 @@
 """Use cases. `edit` is the only code that writes document text."""
 
 from collections.abc import Callable, Sequence
-from contextlib import nullcontext
 from dataclasses import dataclass, replace
 
 from redline.changes import Change, ChangeError, Edit, RangeChange, apply_changes, ordered, resolve
@@ -82,8 +81,7 @@ class Service:
         dry_run: bool = False,
     ) -> EditResult:
         """Apply a change set atomically, or preview it with dry_run."""
-        # A preview reads one immutable snapshot, so only a commit needs the document's lock.
-        with nullcontext() if dry_run else self._store.lock(doc_id):
+        with self._store.lock(doc_id):
             document = self._store.get(doc_id)
             if if_match is None and any(isinstance(change, RangeChange) for change in changes):
                 raise VersionRequired(

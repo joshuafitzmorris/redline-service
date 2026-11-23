@@ -3,7 +3,7 @@
 import os
 
 import anthropic
-from pydantic import BaseModel
+from pydantic import BaseModel, ValidationError
 
 MODEL = os.environ.get("REDLINE_MODEL", "claude-opus-5-5")
 TIMEOUT = 120.0  # seconds; the SDK's default is ten minutes
@@ -61,14 +61,12 @@ def propose(client: anthropic.Anthropic, instruction: str, text: str) -> list[Pr
             messages=[{"role": "user", "content": content}],
             output_format=Proposals,
         )
-        answer = response.parsed_output
     except anthropic.APIError as error:
         # The SDK's message can carry the raw API response; the class name is enough for a caller.
         raise ModelError(f"the model request failed: {type(error).__name__}") from error
-    except Exception as error:
-        # A call to another system: for a reply it cannot read (cut off, malformed, not a
-        # message) the SDK raises several unrelated types, and none is a fault in this service.
+    except ValidationError as error:
+        # The SDK parses the answer as it reads it, so one cut off at max_tokens fails here.
         raise ModelError("the model's answer was cut off or not in the expected format") from error
-    if answer is None:
+    if response.parsed_output is None:
         raise ModelError("the model declined or returned no answer")
-    return answer.proposals
+    return response.parsed_output.proposals

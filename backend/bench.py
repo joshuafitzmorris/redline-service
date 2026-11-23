@@ -1,14 +1,17 @@
-"""Print the benchmark table: best of three runs on synthetic contracts of 1 MB and 10 MB."""
+"""Print the benchmark tables: synthetic contracts of 1 MB and 10 MB, then 10,000 of 20 KB."""
 
+import resource
+import sys
 import time
 from collections.abc import Callable
-from functools import partial
 
 from redline.changes import Change, apply_changes
 from redline.search import WORD, Index, blocks, search, terms
+from redline.service import Service
 from redline.synthetic import contract
 
 MB = 1_000_000
+DOCUMENTS, DOCUMENT_SIZE = 10_000, 20_000  # 20 KB each
 COMMON_QUERY = "agreement shall"
 SELECTIVE_QUERY = "larkspur tamberlane delaware"
 TERMS = ["invoice", "receipt", "Neither", "indirect", "consequential", "damages", "twelve"]
@@ -64,10 +67,25 @@ def column(text: str) -> dict[str, str]:
     }
 
 
-def growth(operation: Callable[[str], object]) -> str:
-    """Time on 1, 2, 4 and 8 MB as multiples of the time on 1 MB, as table cells."""
-    times = [best(partial(operation, contract(size * MB)))[0] for size in (1, 2, 4, 8)]
-    return " | ".join(f"{t / times[0]:.1f}x" for t in times)
+def many_documents() -> dict[str, str]:
+    """Rows for 10,000 small contracts held by one service and searched together."""
+    service = Service()
+    for seed in range(DOCUMENTS):
+        service.create(f"Contract {seed}", contract(DOCUMENT_SIZE, seed))
+    start = time.perf_counter()
+    service.search(SELECTIVE_QUERY)
+    first = time.perf_counter() - start
+    return {
+        "first search, which builds every index": f"{first:.1f} s",
+        f'search "{SELECTIVE_QUERY}"': cell(lambda: service.search(SELECTIVE_QUERY)[0], "hits"),
+        f'search "{COMMON_QUERY}"': cell(lambda: service.search(COMMON_QUERY)[0], "hits"),
+        "peak memory of this process": f"{peak_memory_mb():,.0f} MB",
+    }
+
+
+def peak_memory_mb() -> float:
+    peak = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss  # bytes on macOS, KB on Linux
+    return peak / 1e6 if sys.platform == "darwin" else peak / 1e3
 
 
 def main() -> None:
@@ -75,9 +93,9 @@ def main() -> None:
     print("| operation | 1 MB | 10 MB |\n|---|---|---|")
     for operation in small:
         print(f"| {operation} | {small[operation]} | {large[operation]} |")
-    print("\n| growth with size | 1 MB | 2 MB | 4 MB | 8 MB |\n|---|---|---|---|---|")
-    print(f'| replace every "Agreement" | {growth(replace_all)} |')
-    print(f"| build the index | {growth(Index)} |")
+    print("\n| 10,000 documents of 20 KB, searched together | |\n|---|---|")
+    for operation, value in many_documents().items():
+        print(f"| {operation} | {value} |")
 
 
 if __name__ == "__main__":

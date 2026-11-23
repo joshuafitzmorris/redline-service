@@ -158,7 +158,7 @@ def test_a_range_outside_the_document_is_an_error(start: int, end: int) -> None:
     with pytest.raises(ChangeError) as error:
         apply_changes(TERMS, [RangeChange(start, end, "x")])
     assert str(error.value) == (
-        f"changes[0]: range {start} to {end} is not within the document (0 to {len(TERMS)})"
+        f"changes[0]: {start} to {end} is not a range within the document (0 to {len(TERMS)})"
     )
 
 

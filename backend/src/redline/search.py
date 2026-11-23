@@ -26,7 +26,7 @@ def terms(query: str) -> list[str]:
 
 
 def blocks(text: str) -> list[Span]:
-    """Clause-sized pieces of text: paragraphs, a long one cut at a line break, space or tab."""
+    """Clause-sized pieces of text: paragraphs, a long one cut at a line break or a space."""
     edges = [0, *(gap.start() for gap in GAP.finditer(text)), len(text)]
     pieces: list[Span] = []
     for start, end in pairwise(edges):
@@ -42,7 +42,7 @@ def blocks(text: str) -> list[Span]:
 def cut_point(text: str, start: int) -> tuple[int, int]:
     """Where a too-long block starting at `start` ends, and where the next one begins."""
     limit = start + MAX_BLOCK
-    for separator in "\n", " ", "\t":
+    for separator in "\n", " ":
         at = text.rfind(separator, start + 1, limit + 1)
         if at != -1:
             return at, at + 1

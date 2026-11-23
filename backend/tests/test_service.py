@@ -80,13 +80,6 @@ def finishes_while_locked(lock: threading.Lock, run: Callable[[], object]) -> bo
     return finished
 
 
-def test_a_preview_does_not_wait_for_the_documents_lock() -> None:
-    service = Service()
-    document = service.create("Terms", TEXT)
-    preview = partial(service.edit, document.id, [Change("Net 30", "Net 45")], dry_run=True)
-    assert finishes_while_locked(service._store.lock(document.id), preview)
-
-
 def test_a_commit_does_not_wait_for_another_documents_lock() -> None:
     service = Service()
     locked, other = service.create("Locked", TEXT), service.create("Other", TEXT)

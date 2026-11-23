@@ -65,7 +65,7 @@ def resolve(text: str, change: Change | RangeChange, index: int) -> list[Edit]:
     if isinstance(change, RangeChange):
         start, end = change.start, change.end
         if not 0 <= start <= end <= len(text):
-            reason = f"range {start} to {end} is not within the document (0 to {len(text)})"
+            reason = f"{start} to {end} is not a range within the document (0 to {len(text)})"
             raise ChangeError(index, reason)
         return [Edit(index, start, text[start:end], change.replacement)]
     if not change.text:

@@ -78,7 +78,8 @@ export default function Changes(props: Props) {
           <ul className="items">
             {pending.map((item, i) => {
               const { text, occurrence } = item.change.target;
-              const index = checked.indexOf(item.change);
+              // An edit names its change by its place among the checked ones, which is what was sent.
+              const index = item.checked ? pending.slice(0, i).filter((p) => p.checked).length : -1;
               const count = edits?.filter((edit) => edit.change === index).length ?? 0;
               const which = occurrence === "all" ? "every one" : occurrence && `number ${occurrence}`;
               return (

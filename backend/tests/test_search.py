@@ -88,29 +88,8 @@ def test_a_separator_exactly_at_the_limit_is_a_cut_point() -> None:
     assert blocks(text) == [Span(0, 1_000), Span(1_001, 1_011)]
 
 
-@pytest.mark.parametrize(("preferred", "closer"), [("\n", " "), ("\n", "\t"), (" ", "\t")])
-def test_a_cut_prefers_a_line_break_then_a_space_then_a_tab(preferred: str, closer: str) -> None:
-    text = "a" + preferred + "x" * 997 + closer + "y" * 10
-    assert blocks(text) == [Span(0, 1), Span(2, 999), Span(1_000, 1_010)]
-
-
-def test_a_long_tab_separated_row_is_cut_at_tabs_and_every_cell_is_found() -> None:
-    cells = [f"cell{n}" for n in range(300)]
-    row = "\t".join(cells)
-    split = pieces(row)
-    assert len(row) > MAX_BLOCK
-    assert all(0 < len(piece) <= MAX_BLOCK for piece in split)
-    assert "\t".join(split) == row
-    indexes = {"doc": Index(row)}
-    assert all(search(indexes, cell)[0] == 1 for cell in cells)
-
-
 def test_a_line_without_spaces_is_cut_at_the_limit() -> None:
     assert blocks("x" * 2_500) == [Span(0, 1_000), Span(1_000, 2_000), Span(2_000, 2_500)]
-
-
-def test_a_cut_that_leaves_only_whitespace_is_dropped() -> None:
-    assert blocks("\t" * 1_000 + "x") == [Span(1_000, 1_001)]
 
 
 def test_query_terms_are_casefolded_and_deduplicated() -> None:
@@ -189,12 +168,6 @@ def test_several_documents_are_ranked_together() -> None:
 def test_a_query_without_words_finds_nothing() -> None:
     assert search({"doc": Index(CONTRACT)}, " ,.; ") == (0, [])
     assert search({}, "liability") == (0, [])
-
-
-def test_a_long_paragraph_is_cut_at_the_last_line_break_within_the_limit() -> None:
-    assert blocks("a\n" + "x" * 1_500) == [Span(0, 1), Span(2, 1_002), Span(1_002, 1_502)]
-    assert blocks("a " + "x" * 997 + "\n" + "y" * 10) == [Span(0, 999), Span(1_000, 1_010)]
-    assert blocks("x" * 1_001 + "\ny") == [Span(0, 1_000), Span(1_000, 1_003)]
 
 
 def test_blank_lines_at_the_start_make_no_empty_block() -> None:

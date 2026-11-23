@@ -86,7 +86,8 @@ export default function App() {
       fill(result.suggestions.map((s) => ({ ...s, checked: true })), result.rejected);
     });
 
-  // Opening the first document uses the current state, but is no reason to load the list again.
+  // `open` reads the current state, so the first load calls it through an effect event and the
+  // effect below can run once, on mount.
   const loaded = useEffectEvent((list: Summary[]) => {
     setDocs(list);
     if (list.length > 0) open(list[0].id);

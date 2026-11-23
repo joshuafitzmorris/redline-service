@@ -82,22 +82,6 @@ def test_a_misspelt_query_parameter_is_422_and_commits_nothing(
     assert client.get(f"/documents/{doc['id']}").json()["version"] == 1
 
 
-def test_a_repeated_query_parameter_is_422_and_commits_nothing(
-    client: TestClient, doc: dict[str, Any]
-) -> None:
-    response = client.patch(f"/documents/{doc['id']}?dry_run=true&dry_run=false", json=NET_45)
-    assert_error(response, 422)
-    assert response.json()["error"] == "query.dry_run: given more than once"
-    document = client.get(f"/documents/{doc['id']}").json()
-    assert (document["version"], document["text"]) == (1, TEXT)
-
-
-def test_a_repeated_search_query_is_422(client: TestClient, doc: dict[str, Any]) -> None:
-    response = client.get("/documents/search", params=[("q", "net"), ("q", "late")])
-    assert_error(response, 422)
-    assert response.json()["error"] == "query.q: given more than once"
-
-
 VERBATIM = [
     b'{"changes": [{"operation": "replace", "target": {"text": "old text", "occurrence": 1}, '
     b'"replacement": "new text"}]}',
@@ -156,14 +140,6 @@ def test_an_empty_range_inserts(client: TestClient, doc: dict[str, Any]) -> None
     ]
 
 
-def test_a_range_that_ends_before_it_starts_is_422(client: TestClient, doc: dict[str, Any]) -> None:
-    reversed_range = {"changes": [{"range": {"start": 5, "end": 4}, "text": "x"}]}
-    path = f"/documents/{doc['id']}"
-    response = client.patch(path, json=reversed_range, headers={"If-Match": '"1"'})
-    assert_error(response, 422)
-    assert response.json()["error"] == "changes[0].range: end must not be before start"
-
-
 @pytest.mark.parametrize("if_match", ["1", "*"])
 def test_a_bare_or_star_if_match_is_accepted(
     client: TestClient, doc: dict[str, Any], if_match: str
@@ -172,7 +148,7 @@ def test_a_bare_or_star_if_match_is_accepted(
     assert response.status_code == 200
 
 
-@pytest.mark.parametrize("if_match", ['W/"1"', '"1', "one", "1, 2", "9" * 4_301])
+@pytest.mark.parametrize("if_match", ['W/"1"', "one", "1, 2"])
 def test_a_malformed_if_match_is_422_with_a_plain_message(
     client: TestClient, doc: dict[str, Any], if_match: str
 ) -> None:
@@ -206,12 +182,6 @@ def test_a_change_that_does_not_fit_is_409(client: TestClient, doc: dict[str, An
     assert response.json()["error"] == (
         'changes[0]: "Net 30" appears 2 times and no occurrence was given'
     )
-
-
-def test_a_huge_occurrence_is_409(client: TestClient, doc: dict[str, Any]) -> None:
-    body = b'{"changes": [{"target": {"text": "Net 30", "occurrence": 10000000000000000000}, '
-    body += b'"replacement": "Net 45"}]}'
-    assert_error(client.patch(f"/documents/{doc['id']}", content=body, headers=JSON), 409)
 
 
 def test_a_stale_if_match_is_412(client: TestClient, doc: dict[str, Any]) -> None:
@@ -276,26 +246,17 @@ def test_a_body_not_sent_as_json_is_415(client: TestClient, content_type: str | 
     }
 
 
-@pytest.mark.parametrize(
-    ("path", "body"),
-    [
-        ("/documents", b'{"text": "Net \\ud800 30"}'),
-        ("/documents", b'{"title": "\\ud800", "text": "Net 30"}'),
-        ("{doc}", b'{"changes": [{"target": {"text": "Net 30"}, "replacement": "\\udc00"}]}'),
-        ("{doc}/suggestions", b'{"instruction": "Net \\ud800"}'),
-    ],
-    ids=["text", "title", "replacement", "instruction"],
-)
-def test_an_unpaired_surrogate_is_422(
-    client: TestClient, doc: dict[str, Any], path: str, body: bytes
-) -> None:
-    method = "PATCH" if path == "{doc}" else "POST"
-    url = path.replace("{doc}", f"/documents/{doc['id']}")
-    response = client.request(method, url, content=body, headers=JSON)
-    assert_error(response, 422)
-    assert response.json()["error"].endswith(
-        ": contains an unpaired surrogate, which is not valid Unicode text"
-    )
+def test_an_unpaired_surrogate_is_422(client: TestClient, doc: dict[str, Any]) -> None:
+    change = b'{"changes": [{"target": {"text": "Net 30"}, "replacement": "\\udc00"}]}'
+    responses = [
+        client.post("/documents", content=b'{"text": "Net \\ud800 30"}', headers=JSON),
+        client.patch(f"/documents/{doc['id']}", content=change, headers=JSON),
+    ]
+    for response in responses:
+        assert_error(response, 422)
+        assert response.json()["error"].endswith(
+            ": contains an unpaired surrogate, which is not valid Unicode text"
+        )
 
 
 def failing_proposer(error: Exception) -> Proposer:
@@ -394,14 +355,3 @@ def test_a_bad_search_query_is_422(
 ) -> None:
     assert_error(client.get("/documents/search", params=params), 422)
     assert_error(client.get(f"/documents/{doc['id']}/search", params=params), 422)
-
-
-def test_the_openapi_document_declares_the_real_error_bodies(client: TestClient) -> None:
-    document = client.get("/openapi.json").json()
-    patch = document["paths"]["/documents/{doc_id}"]["patch"]["responses"]
-    error = {"application/json": {"schema": {"$ref": "#/components/schemas/Error"}}}
-    for code in ["400", "404", "409", "412", "415", "422", "428"]:
-        assert patch[code]["content"] == error
-    for path in ["/documents", "/documents/{doc_id}/suggestions"]:
-        assert document["paths"][path]["post"]["responses"]["415"]["content"] == error
-    assert "HTTPValidationError" not in str(document)

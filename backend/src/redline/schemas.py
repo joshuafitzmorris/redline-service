@@ -13,7 +13,8 @@ SURROGATE = re.compile("[\ud800-\udfff]")
 
 
 def unicode_text(value: object) -> object:
-    # Before pydantic's own check, which gives a vaguer message and only on length-limited fields.
+    # JSON can carry half of a surrogate pair and UTF-8 cannot, so a document holding one could
+    # never be sent back. Pydantic's own check only covers fields that have a length limit.
     if isinstance(value, str) and SURROGATE.search(value):
         message = "contains an unpaired surrogate, which is not valid Unicode text"
         raise PydanticCustomError("unicode", message)
@@ -38,12 +39,6 @@ class Target(BaseModel, extra="forbid"):
 class Range(BaseModel, extra="forbid"):
     start: int = Field(strict=True, ge=0)
     end: int = Field(strict=True, ge=0)
-
-    @model_validator(mode="after")
-    def end_not_before_start(self) -> Self:
-        if self.end < self.start:
-            raise PydanticCustomError("range", "end must not be before start")
-        return self
 
 
 class ChangeSpec(BaseModel, extra="forbid"):
