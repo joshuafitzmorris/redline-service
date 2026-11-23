@@ -1,0 +1,31 @@
+Software License Agreement
+
+1. Parties. This Software License Agreement (the "Agreement") is made between Marrowfield Software, Inc. ("Licensor") and Kestrelmoor Freight LLC ("Licensee"), effective March 1, 2026.
+
+2. License Grant. Subject to this Agreement, Licensor grants Licensee a non-exclusive, non-transferable license to install and use the route planning software described in Schedule A (the "Software") for Licensee's internal business purposes.
+
+3. Restrictions. Licensee shall not copy, modify, sublicense or reverse engineer the Software, except to the extent applicable law expressly permits it, and shall not make the Software available to any third party.
+
+4. Fees and Payment. Licensee shall pay the annual license fee set out in Schedule B. Licensor will invoice Licensee annually in advance, and Licensee shall pay each invoice within Net 30 days of receipt.
+
+5. Late Payment. Any amount not paid within Net 30 days of its due date bears interest at one percent per month, and Licensor may suspend access to the Software after giving Licensee written notice.
+
+6. Support. Licensor will provide support by email during business hours and will use reasonable efforts to correct reported defects. Additional support services are invoiced monthly and are payable Net 30.
+
+7. Warranty. Licensor warrants that the Software will perform substantially as described in its documentation for ninety (90) days after delivery. Licensee's sole remedy for a breach of this warranty is correction or replacement of the Software or, if neither is practical, a refund of the fees paid for it.
+
+8. Confidentiality. Each party shall keep the other party's confidential information secret, use it only to perform this Agreement, and disclose it only to employees and advisers who need to know it and are bound by similar obligations.
+
+9. Limitation of Liability. Neither party is liable for indirect, incidental or consequential damages, or for lost profits, even if advised of their possibility. Each party's total liability under this Agreement, whether in contract, tort or otherwise, shall not exceed the fees paid by Licensee in the twelve (12) months before the claim.
+
+10. Indemnification. Licensor shall defend Licensee against any claim that the Software infringes a third party's intellectual property rights and pay any damages finally awarded, provided that Licensee notifies Licensor promptly and allows Licensor to control the defense.
+
+11. Term and Termination. This Agreement renews for successive one-year terms unless either party gives notice of non-renewal at least sixty (60) days before the end of a term. Either party may terminate this Agreement for a material breach that is not cured within thirty (30) days after written notice. On termination, Licensee shall stop using the Software and delete all copies.
+
+12. Assignment. Licensee may not assign this Agreement without Licensor's prior written consent, except to a successor to its entire business that agrees in writing to be bound by it.
+
+13. Governing Law. This Agreement is governed by the laws of the State of Delaware, without regard to its conflict of laws rules, and the parties submit to the exclusive jurisdiction of the state and federal courts located in Delaware.
+
+14. Notices. Notices must be in writing and take effect when delivered by hand or courier to the address of the receiving party set out above, or when sent by email with confirmation of receipt.
+
+15. Entire Agreement. This Agreement, with its schedules, is the entire contract between Licensor and Licensee about its subject matter and supersedes all prior proposals and understandings. It may be amended only in a writing signed by both parties.

@@ -1,0 +1,27 @@
+Mutual Non-Disclosure Agreement
+
+1. Parties. This Mutual Non-Disclosure Agreement (the "Agreement") is made on April 14, 2026 between Ostrander Bioworks, Inc. and Velloway Analytics Ltd. Each party may disclose information as the "Disclosing Party" and receive it as the "Receiving Party".
+
+2. Purpose. The parties wish to evaluate a possible collaboration on laboratory data analysis (the "Purpose") and will share information only for that Purpose.
+
+3. Confidential Information. "Confidential Information" means any business, technical or financial information that the Disclosing Party discloses to the Receiving Party, in any form, that is marked confidential or that a reasonable person would understand to be confidential.
+
+4. Exclusions. Confidential Information does not include information that is or becomes public through no fault of the Receiving Party, that the Receiving Party already knew without restriction, that the Receiving Party develops independently, or that a third party lawfully provides without restriction.
+
+5. Obligations. The Receiving Party shall use Confidential Information only for the Purpose, protect it with at least the care it uses for its own similar information and never less than reasonable care, and disclose it only to employees and advisers who need to know it and are bound by duties of confidence no less protective than this Agreement.
+
+6. Compelled Disclosure. If law or a court order requires the Receiving Party to disclose Confidential Information, it may do so, but it shall first give the Disclosing Party prompt notice, where lawful, and reasonable help in seeking a protective order.
+
+7. Return of Materials. Within fifteen (15) days after a written request, the Receiving Party shall return or destroy all Confidential Information in its possession and confirm in writing that it has done so, except for copies kept in routine backups, which remain subject to this Agreement.
+
+8. No License. Nothing in this Agreement grants the Receiving Party any license or other right in the Disclosing Party's patents, copyrights, trade secrets or other intellectual property.
+
+9. No Warranty. Confidential Information is provided "as is", without any warranty of accuracy or completeness. Neither party is obliged to disclose any particular information or to enter into any further agreement.
+
+10. Term. This Agreement covers disclosures made during the two (2) years after its date. The Receiving Party's obligations for each disclosure last for three (3) years after that disclosure, and for trade secrets for as long as they remain trade secrets.
+
+11. Remedies. Unauthorized use or disclosure of Confidential Information may cause harm that money damages cannot repair, so the Disclosing Party may seek an injunction in addition to any other remedy available to it.
+
+12. Governing Law. This Agreement is governed by the laws of the State of New York, and the parties submit to the exclusive jurisdiction of the courts located in New York County.
+
+13. Entire Agreement. This Agreement is the entire contract between the parties about its subject matter. It may be amended or waived only in a writing signed by both parties, and neither party may assign it without the other party's written consent.

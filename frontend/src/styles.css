@@ -1,0 +1,151 @@
+:root {
+  --ink: #1d2125;
+  --muted: #6a7178;
+  --line: #d8dadd;
+  --field: #7d848b;
+  --panel: #f6f6f4;
+  --accent: #2357a4;
+  --removed: #b3261e;
+  --inserted: #17763a;
+  color: var(--ink);
+  background: #fff;
+  font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; }
+h1 { margin: 0; font-size: 1.1rem; }
+p { margin: 0.25rem 0; }
+ul { margin: 0 0 0.75rem; padding: 0; list-style: none; }
+.muted { color: var(--muted); }
+del { color: var(--removed); }
+ins { color: var(--inserted); }
+mark { color: var(--ink); background: color-mix(in srgb, var(--accent) 25%, transparent); }
+
+h2 {
+  margin: 0 0 0.5rem;
+  color: var(--muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.app {
+  display: grid;
+  grid-template: auto minmax(0, 1fr) / 16rem minmax(0, 1fr) 21rem;
+  height: 100dvh;
+}
+
+/* The banner row is empty most of the time, so the columns are placed in row 2 explicitly. */
+.app > aside, .app > main { grid-row: 2; overflow-y: auto; }
+aside { padding: 1rem; background: var(--panel); }
+aside > * + * { margin-top: 1.75rem; }
+.sidebar { border-right: 1px solid var(--line); }
+.changes { border-left: 1px solid var(--line); }
+
+.banner {
+  display: flex;
+  grid-column: 1 / -1;
+  gap: 0.5rem;
+  align-items: center;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--removed);
+}
+
+.banner span { flex: 1; }
+
+button, input, textarea { color: inherit; font: inherit; }
+
+button {
+  padding: 0.25rem 0.75rem;
+  border: 1px solid var(--field);
+  border-radius: 4px;
+  background: #fff;
+  cursor: pointer;
+}
+
+button:disabled { opacity: 0.5; cursor: default; }
+
+input:not([type="radio"], [type="checkbox"], [type="file"]), textarea {
+  display: block;
+  width: 100%;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid var(--field);
+  border-radius: 4px;
+}
+
+form > label, fieldset { display: block; margin: 0 0 0.5rem; padding: 0; border: 0; }
+.field { display: grid; grid-template-columns: 6.5rem 1fr; align-items: baseline; }
+/* A floated legend is an ordinary grid item, not part of the fieldset's border. */
+.field legend { float: left; padding: 0; }
+.field input[type="number"] { width: 4.5rem; }
+
+.field > label, .field > span, .field > span > label {
+  display: flex;
+  grid-column: 2;
+  gap: 0.4rem;
+  align-items: center;
+  margin: 0;
+}
+
+.list button {
+  display: block;
+  width: 100%;
+  padding: 0.3rem 0.4rem;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+.list button[aria-current="true"] { color: var(--accent); font-weight: 600; }
+.scope { display: flex; flex-wrap: wrap; gap: 0.15rem 0.75rem; margin: 0.4rem 0 0; }
+.scope label { display: flex; gap: 0.3rem; align-items: center; white-space: nowrap; }
+
+/* The status keeps its line when empty, so the panel does not jump as messages come and go. */
+.status { min-height: 1lh; }
+
+.snippet {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--muted);
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+.items li { padding: 0.4rem 0; border-bottom: 1px solid var(--line); }
+.items label { display: flex; gap: 0.5rem; align-items: baseline; }
+.items label + p { margin-left: 1.4rem; }
+
+.viewer header {
+  position: sticky;
+  top: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 1rem 2rem;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+}
+
+.notice {
+  margin: 0;
+  padding: 0.5rem 2rem;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.text {
+  max-width: 46rem;
+  padding: 1.5rem 2rem 4rem;
+  font: 1.05rem/1.65 Charter, "Iowan Old Style", Georgia, serif;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+}
+
+/* On a narrow screen the columns stack and the page itself scrolls. */
+@media (width < 60rem) {
+  .app { display: block; height: auto; }
+  .app > aside, .app > main { overflow: visible; }
+  .app > aside { border: 0; }
+}
