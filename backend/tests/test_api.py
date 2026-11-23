@@ -82,6 +82,22 @@ def test_a_misspelt_query_parameter_is_422_and_commits_nothing(
     assert client.get(f"/documents/{doc['id']}").json()["version"] == 1
 
 
+def test_a_repeated_query_parameter_is_422_and_commits_nothing(
+    client: TestClient, doc: dict[str, Any]
+) -> None:
+    response = client.patch(f"/documents/{doc['id']}?dry_run=true&dry_run=false", json=NET_45)
+    assert_error(response, 422)
+    assert response.json()["error"] == "query.dry_run: given more than once"
+    document = client.get(f"/documents/{doc['id']}").json()
+    assert (document["version"], document["text"]) == (1, TEXT)
+
+
+def test_a_repeated_search_query_is_422(client: TestClient, doc: dict[str, Any]) -> None:
+    response = client.get("/documents/search", params=[("q", "net"), ("q", "late")])
+    assert_error(response, 422)
+    assert response.json()["error"] == "query.q: given more than once"
+
+
 VERBATIM = [
     b'{"changes": [{"operation": "replace", "target": {"text": "old text", "occurrence": 1}, '
     b'"replacement": "new text"}]}',
@@ -129,6 +145,23 @@ def test_a_range_change_without_if_match_is_428(client: TestClient, doc: dict[st
 def test_a_range_change_with_if_match_applies(client: TestClient, doc: dict[str, Any]) -> None:
     response = client.patch(f"/documents/{doc['id']}", json=PAYMENT, headers={"If-Match": '"1"'})
     assert response.json()["text"] == TEXT.replace("Payment", "Price")
+
+
+def test_an_empty_range_inserts(client: TestClient, doc: dict[str, Any]) -> None:
+    insertion = {"changes": [{"range": {"start": 10, "end": 10}, "text": " terms"}]}
+    response = client.patch(f"/documents/{doc['id']}", json=insertion, headers={"If-Match": '"1"'})
+    assert response.json()["text"] == TEXT.replace("Payment", "Payment terms", 1)
+    assert response.json()["edits"] == [
+        {"change": 0, "start": 10, "removed": "", "inserted": " terms"}
+    ]
+
+
+def test_a_range_that_ends_before_it_starts_is_422(client: TestClient, doc: dict[str, Any]) -> None:
+    reversed_range = {"changes": [{"range": {"start": 5, "end": 4}, "text": "x"}]}
+    path = f"/documents/{doc['id']}"
+    response = client.patch(path, json=reversed_range, headers={"If-Match": '"1"'})
+    assert_error(response, 422)
+    assert response.json()["error"] == "changes[0].range: end must not be before start"
 
 
 @pytest.mark.parametrize("if_match", ["1", "*"])

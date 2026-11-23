@@ -63,9 +63,10 @@ def test_index_build_time_grows_linearly() -> None:
         lambda size: "x" * size,
         lambda size: " " * size,
         lambda size: "\n" * size,
+        lambda size: "\t" * size,
         lambda size: ("\n" + " " * MB + "x") * (size // MB),
     ],
-    ids=["no whitespace", "spaces", "newlines", "long runs of spaces between lines"],
+    ids=["no whitespace", "spaces", "newlines", "tabs", "long runs of spaces between lines"],
 )
 def test_splitting_awkward_text_into_blocks_grows_linearly(make: Callable[[int], str]) -> None:
     assert growth(blocks, make) < 16

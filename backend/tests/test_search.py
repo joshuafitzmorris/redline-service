@@ -72,13 +72,37 @@ def test_a_long_line_is_split_at_the_last_space_within_the_limit() -> None:
     words = " ".join(["indemnify"] * 500)
     assert blocks(words) == [Span(n, n + 999) for n in range(0, 5_000, 1_000)]
     assert blocks("x" * 1_001 + " y") == [Span(0, 1_000), Span(1_000, 1_003)]
-    assert blocks("a " + "x" * 1_500) == [Span(0, 1), Span(2, 1_001), Span(1_001, 1_502)]
+    assert blocks("a " + "x" * 1_500) == [Span(0, 1), Span(2, 1_002), Span(1_002, 1_502)]
 
 
-def test_a_line_of_exactly_the_limit_is_one_block() -> None:
+def test_a_line_of_exactly_the_limit_is_one_block_even_after_a_cut() -> None:
     line = "a " * 499 + "ab"
     assert len(line) == MAX_BLOCK
     assert blocks(line) == [Span(0, MAX_BLOCK)]
+    assert blocks("first\n" + line) == [Span(0, 5), Span(6, 1_006)]
+
+
+def test_a_separator_exactly_at_the_limit_is_a_cut_point() -> None:
+    text = "x" * 994 + " " + "y" * 5 + "\n" + "z" * 10
+    assert text.index("\n") == MAX_BLOCK
+    assert blocks(text) == [Span(0, 1_000), Span(1_001, 1_011)]
+
+
+@pytest.mark.parametrize(("preferred", "closer"), [("\n", " "), ("\n", "\t"), (" ", "\t")])
+def test_a_cut_prefers_a_line_break_then_a_space_then_a_tab(preferred: str, closer: str) -> None:
+    text = "a" + preferred + "x" * 997 + closer + "y" * 10
+    assert blocks(text) == [Span(0, 1), Span(2, 999), Span(1_000, 1_010)]
+
+
+def test_a_long_tab_separated_row_is_cut_at_tabs_and_every_cell_is_found() -> None:
+    cells = [f"cell{n}" for n in range(300)]
+    row = "\t".join(cells)
+    split = pieces(row)
+    assert len(row) > MAX_BLOCK
+    assert all(0 < len(piece) <= MAX_BLOCK for piece in split)
+    assert "\t".join(split) == row
+    indexes = {"doc": Index(row)}
+    assert all(search(indexes, cell)[0] == 1 for cell in cells)
 
 
 def test_a_line_without_spaces_is_cut_at_the_limit() -> None:
@@ -91,6 +115,12 @@ def test_a_cut_that_leaves_only_whitespace_is_dropped() -> None:
 
 def test_query_terms_are_casefolded_and_deduplicated() -> None:
     assert terms("Liability, LIABILITY and liability caps") == ["liability", "and", "caps"]
+
+
+def test_an_underscore_separates_words_and_a_signature_blank_is_not_a_word() -> None:
+    text = "Effective_Date: 1 March 2026"
+    assert snippets(text, "effective") == snippets(text, "date") == [text]
+    assert Index("Signature: " + "_" * 30).postings.keys() == {"signature"}
 
 
 def test_every_term_must_appear_in_the_same_block() -> None:
@@ -162,7 +192,7 @@ def test_a_query_without_words_finds_nothing() -> None:
 
 
 def test_a_long_paragraph_is_cut_at_the_last_line_break_within_the_limit() -> None:
-    assert blocks("a\n" + "x" * 1_500) == [Span(0, 1), Span(2, 1_001), Span(1_001, 1_502)]
+    assert blocks("a\n" + "x" * 1_500) == [Span(0, 1), Span(2, 1_002), Span(1_002, 1_502)]
     assert blocks("a " + "x" * 997 + "\n" + "y" * 10) == [Span(0, 999), Span(1_000, 1_010)]
     assert blocks("x" * 1_001 + "\ny") == [Span(0, 1_000), Span(1_000, 1_003)]
 

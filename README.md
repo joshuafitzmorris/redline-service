@@ -88,11 +88,11 @@ A change names its target in one of two ways:
 
 For both:
 
-- Every change in a request is matched against the document as it was before the request, so the result does not depend on their order and one change can never match text another inserted.
+- Every change in a request is matched against the document as it was before the request, so one change can never match text another inserted. Their order only matters for two insertions at the same offset, which keep it.
 - If one change fails, none is applied, and the error names it (`changes[1]: ...`). Two changes that touch the same text are rejected.
 - Matching is exact: case, spacing and quote characters all count, and matches are counted without overlap, the way `str.replace` counts them. The price is that a straight apostrophe does not match a curly one.
 - `edits` is the redline: what was removed, what replaced it and where, in document order. `start` is an offset in the text the changes were applied to.
-- Unknown fields and unknown query parameters are a 422, so a misspelt `dry_run` cannot turn a preview into a commit. A request carries at most 1,000 changes.
+- Unknown fields are a 422. So are unknown query parameters on `PATCH` and search, and any parameter given twice, so a misspelt `dry_run` cannot turn a preview into a commit. A request carries at most 1,000 changes.
 
 ### Versions
 
@@ -120,7 +120,7 @@ curl -G localhost:8000/documents/$ID/search --data-urlencode 'q=limitation liabi
 }
 ```
 
-- A hit is a clause-sized block: a paragraph, cut at a line break or a space if it runs past 1,000 characters. Paragraphs are separated by blank lines, so hard-wrapped text works. Text with no blank lines at all is cut into blocks of whole lines.
+- A hit is a clause-sized block: a paragraph, cut at a line break, a space or a tab if it runs past 1,000 characters. Paragraphs are separated by blank lines, so hard-wrapped text works. Text with no blank lines at all is cut into blocks of whole lines.
 - A block has to contain every query word. Words are runs of letters and digits, matched whole and without regard to case. There is no stopword list, because "shall" and "may" are different obligations. There is no stemming yet, which costs recall: "indemnify" does not find "indemnification".
 - Ranking is BM25 over the blocks of the documents being searched. `limit` and `offset` page through the results in a stable order.
 - `snippet` is exactly `text[start:end]` and `matches` are document offsets, both at the `version` given. That is what a change by position needs: `{"range": {"start": 1838, "end": 1848}, "text": "Limits"}` with `If-Match: "2"` replaces the first match above.
@@ -131,7 +131,7 @@ curl -G localhost:8000/documents/$ID/search --data-urlencode 'q=limitation liabi
 
 So a quote the model made up cannot become an edit, and text inside a contract that tries to instruct the model can at worst produce a suggestion. It cannot write; a person has to apply it.
 
-Documents over 200,000 characters get a 413, because sending a whole large contract to a model is slow and expensive; retrieving the relevant clauses first is on the list at the end. The model call gets one attempt and two minutes, and it holds a request thread while it runs. Past a prototype it would be a job with a status URL.
+Documents over 200,000 characters get a 413, because sending a whole large contract to a model is slow and expensive; retrieving the relevant clauses first is on the list at the end. The model call gets one attempt with a two-minute timeout, and it holds a request thread while it runs. Past a prototype it would be a job with a status URL.
 
 ### Errors
 
@@ -160,19 +160,19 @@ One screen. The change form and the model both fill a single pending change set.
 | operation | 1 MB | 10 MB |
 |---|---|---|
 | one unique replace | 0.2 ms | 1.3 ms |
-| replace every "Agreement" | 2.5 ms (4,526 matches) | 28.8 ms (44,994 matches) |
-| change set of 20 distinct terms | 18.2 ms | 194.3 ms |
-| build the index | 28.2 ms | 297.3 ms |
-| search "agreement shall" | 0.9 ms (1,835 hits) | 8.0 ms (17,953 hits) |
+| replace every "Agreement" | 2.4 ms (4,526 matches) | 28.6 ms (44,994 matches) |
+| change set of 20 distinct terms | 18.0 ms | 196.1 ms |
+| build the index | 29.9 ms | 319.0 ms |
+| search "agreement shall" | 0.9 ms (1,835 hits) | 8.1 ms (17,953 hits) |
 | search "larkspur tamberlane delaware" | 0.1 ms (29 hits) | 0.4 ms (253 hits) |
-| scan every block for "agreement shall" (no index) | 15.6 ms (1,835 hits) | 152.8 ms (17,953 hits) |
+| scan every block for "agreement shall" (no index) | 17.9 ms (1,835 hits) | 182.5 ms (17,953 hits) |
 
-From 1 MB to 8 MB, replacing every match takes 8.1 times as long and building the index 9.2 times.
+From 1 MB to 8 MB, replacing every match takes 8.2 times as long and building the index 8.7 times.
 
 - Finding text is `str.find`, which runs in C and has been linear in the worst case since CPython 3.10, when it gained the two-way algorithm. A test times a needle built to defeat naive search.
-- Each distinct target is one scan of the text, which is where the 20-term row gets its time. Applying is one pass and one join. So k targets and m edits cost O(k·n) to find and O(n + m log m) to order and apply. Past a few hundred targets in one request I would replace the scans with a single Aho-Corasick pass.
+- Each change is one scan of the text, which is where the 20-term row gets its time. Applying is one pass and one join. So k changes with m edits cost O(k·n) to find and O(n + m log m) to order and apply. Past a few hundred changes in one request I would replace the scans with a single Aho-Corasick pass.
 - Search uses an inverted index per document, built in one pass: each word maps to the blocks that contain it. A query intersects the postings of its words starting from the shortest, scores each candidate, and keeps the top page with a heap.
-- The index is a pure function of the text, so it is cached by document version and never updated in place. An edit leaves it alone and the next search rebuilds it. That keeps a 10 MB edit at 29 ms where rebuilding on every write would add about 300. A query takes 8 ms through the index against 153 ms scanning every block, so the index is ahead from the third search of a version.
+- The index is a pure function of the text, so it is cached by document version and never updated in place. An edit leaves it alone and the next search rebuilds it. That keeps a 10 MB edit at 29 ms where rebuilding on every write would add about 320. A query takes 8 ms through the index against about 180 ms scanning every block, so the index has paid for itself by the third search of a version.
 - The index costs memory: about 78 MB of plain dicts for the 10 MB document. Past one machine this is a job for Postgres full-text or OpenSearch.
 - The benchmark text comes from seven clause templates, so apart from clause numbers it has about a hundred distinct words. Real contracts have a larger vocabulary.
 - `PATCH` returns the whole updated text, which is right at contract size and wasteful at 10 MB. Documents are immutable strings in memory; one too large for that would be spliced as a stream, in the same sorted order of edits.

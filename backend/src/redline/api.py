@@ -2,13 +2,14 @@
 
 import os
 import re
+from collections import Counter
 from collections.abc import Mapping
 from dataclasses import asdict
 from functools import partial
 from pathlib import Path
 from typing import Annotated, Any
 
-from fastapi import FastAPI, Header, Query, Request, Response
+from fastapi import Depends, FastAPI, Header, Query, Request, Response
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException
@@ -50,7 +51,7 @@ def create_app(service: Service | None = None) -> FastAPI:
     """The app around `service`, or around the default service when none is given."""
     if service is None:
         service = default_service()
-    app = FastAPI(title="Redline", responses=responses(422))
+    app = FastAPI(title="Redline", responses=responses(422), dependencies=[Depends(single_valued)])
 
     def domain_error(request: Request, exc: Exception) -> JSONResponse:
         return error(STATUS[type(exc)], str(exc))
@@ -189,7 +190,7 @@ def default_service() -> Service:
     service = Service(proposer)
     if seed := os.environ.get("REDLINE_SEED"):
         for path in sorted(Path(seed).glob("*.txt")):
-            text = path.read_text(encoding="utf-8")
+            text = path.read_text(encoding="utf-8-sig")
             title = next((line.strip() for line in text.splitlines() if line.strip()), path.stem)
             service.create(title, text)
     return service
@@ -198,6 +199,14 @@ def default_service() -> Service:
 def responses(*codes: int) -> dict[int | str, dict[str, Any]]:
     """The OpenAPI description of these error responses, all with the `Error` body."""
     return {code: {"model": schemas.Error, "description": ERRORS[code]} for code in codes}
+
+
+def single_valued(request: Request) -> None:
+    """Refuse a query string that gives one parameter twice, so that no value silently wins."""
+    counts = Counter(name for name, _ in request.query_params.multi_items())
+    for name, count in counts.items():
+        if count > 1:
+            raise HTTPException(422, f"query.{name}: given more than once")
 
 
 def parse_if_match(header: str | None) -> int | None:

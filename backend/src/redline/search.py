@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from itertools import pairwise
 from typing import NamedTuple
 
-WORD = re.compile(r"\w+")
+WORD = re.compile(r"[^\W_]+")  # letters and digits; \w would also take the underscore
 GAP = re.compile(r"\n\s*\n")  # one or more blank lines
 MAX_BLOCK = 1_000  # characters
 K1, B = 1.2, 0.75  # BM25 constants (Lucene's defaults)
@@ -26,22 +26,27 @@ def terms(query: str) -> list[str]:
 
 
 def blocks(text: str) -> list[Span]:
-    """Clause-sized pieces of text: paragraphs, a long one cut at a line break or a space."""
+    """Clause-sized pieces of text: paragraphs, a long one cut at a line break, space or tab."""
     edges = [0, *(gap.start() for gap in GAP.finditer(text)), len(text)]
     pieces: list[Span] = []
     for start, end in pairwise(edges):
         while end - start > MAX_BLOCK:
-            limit = start + MAX_BLOCK
-            cut = text.rfind("\n", start + 1, limit + 1)
-            if cut == -1:
-                cut = text.rfind(" ", start + 1, limit + 1)
-            if cut == -1:
-                cut = limit
+            cut, next_start = cut_point(text, start)
             pieces.append(Span(start, cut))
-            start = cut
+            start = next_start
         pieces.append(Span(start, end))
     trimmed = (trim(text, piece) for piece in pieces)
     return [piece for piece in trimmed if piece.start < piece.end]
+
+
+def cut_point(text: str, start: int) -> tuple[int, int]:
+    """Where a too-long block starting at `start` ends, and where the next one begins."""
+    limit = start + MAX_BLOCK
+    for separator in "\n", " ", "\t":
+        at = text.rfind(separator, start + 1, limit + 1)
+        if at != -1:
+            return at, at + 1
+    return limit, limit
 
 
 def trim(text: str, span: Span) -> Span:

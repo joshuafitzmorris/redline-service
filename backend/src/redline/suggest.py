@@ -46,7 +46,8 @@ class ModelError(Exception):
 def new_client() -> anthropic.Anthropic:
     """A client for an interactive endpoint: one attempt, and give up after two minutes."""
     # No retries: the SDK waits as long as a server's retry-after says, so a retry has no bound.
-    return anthropic.Anthropic(timeout=TIMEOUT, max_retries=0)
+    # A plain number would also raise the SDK's 5-second connect timeout to two minutes.
+    return anthropic.Anthropic(timeout=anthropic.Timeout(TIMEOUT, connect=5.0), max_retries=0)
 
 
 def propose(client: anthropic.Anthropic, instruction: str, text: str) -> list[Proposal]:
@@ -60,13 +61,14 @@ def propose(client: anthropic.Anthropic, instruction: str, text: str) -> list[Pr
             messages=[{"role": "user", "content": content}],
             output_format=Proposals,
         )
+        answer = response.parsed_output
     except anthropic.APIError as error:
         # The SDK's message can carry the raw API response; the class name is enough for a caller.
         raise ModelError(f"the model request failed: {type(error).__name__}") from error
-    except ValueError as error:
-        # parse() validates the answer while it builds the response, so a cut-off, refused or
-        # malformed answer raises here (pydantic's ValidationError is a ValueError).
+    except Exception as error:
+        # A call to another system: for a reply it cannot read (cut off, malformed, not a
+        # message) the SDK raises several unrelated types, and none is a fault in this service.
         raise ModelError("the model's answer was cut off or not in the expected format") from error
-    if response.parsed_output is None:
+    if answer is None:
         raise ModelError("the model declined or returned no answer")
-    return response.parsed_output.proposals
+    return answer.proposals

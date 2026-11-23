@@ -39,6 +39,12 @@ class Range(BaseModel, extra="forbid"):
     start: int = Field(strict=True, ge=0)
     end: int = Field(strict=True, ge=0)
 
+    @model_validator(mode="after")
+    def end_not_before_start(self) -> Self:
+        if self.end < self.start:
+            raise PydanticCustomError("range", "end must not be before start")
+        return self
+
 
 class ChangeSpec(BaseModel, extra="forbid"):
     """One change, in one of two forms: `target` and `replacement`, or `range` and `text`."""

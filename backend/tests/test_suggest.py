@@ -174,12 +174,26 @@ def test_propose_sends_the_contract_and_instruction_and_returns_the_proposals() 
 
 UNUSABLE = [
     SimpleNamespace(parsed_output=None),
+    SimpleNamespace(),
     cut_off_answer(),
     ValueError("an SDK guard"),
+    AttributeError("'NoneType' object has no attribute 'content'"),
+    TypeError("'NoneType' object is not iterable"),
+    RecursionError("maximum recursion depth exceeded"),
     anthropic.APIConnectionError(request=REQUEST),
     anthropic.APITimeoutError(request=REQUEST),
 ]
-UNUSABLE_IDS = ["no answer", "cut off", "value error", "connection", "timeout"]
+UNUSABLE_IDS = [
+    "no answer",
+    "not a message",
+    "cut off",
+    "value error",
+    "attribute error",
+    "type error",
+    "recursion error",
+    "connection",
+    "timeout",
+]
 
 
 @pytest.mark.parametrize("result", UNUSABLE, ids=UNUSABLE_IDS)
@@ -203,7 +217,8 @@ def test_an_unusable_answer_is_a_502(result: object) -> None:
 def test_a_new_client_makes_one_attempt_with_a_timeout(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setenv("ANTHROPIC_API_KEY", "never-used")
     client = new_client()
-    assert (client.timeout, client.max_retries) == (TIMEOUT, 0)
+    assert isinstance(client.timeout, anthropic.Timeout)
+    assert (client.timeout.connect, client.timeout.read, client.max_retries) == (5.0, TIMEOUT, 0)
     assert TIMEOUT == 120.0
 
 
@@ -216,10 +231,12 @@ def test_the_default_service_loads_the_seed_files_without_a_model(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     seed(tmp_path, monkeypatch)
+    (tmp_path / "with-bom.txt").write_text("Order Form\nNet 30.\n", encoding="utf-8-sig")
     monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
     service = default_service()
-    [document] = service.documents()
+    document, with_bom = service.documents()
     assert (document.title, document.text) == ("Payment Terms", f"\n  Payment Terms  \n\n{TEXT}\n")
+    assert (with_bom.title, with_bom.text) == ("Order Form", "Order Form\nNet 30.\n")
     with pytest.raises(Unavailable):
         service.suggest(document.id, "Make payment terms Net 45")
 
